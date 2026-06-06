@@ -6,6 +6,9 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Enable CORS
+  app.enableCors();
+
   // Enable global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
@@ -13,6 +16,7 @@ async function bootstrap() {
       transform: true, // Auto-transform payloads to be DTO instances
     }),
   );
+
 
   // Configure Swagger documentation
   const config = new DocumentBuilder()

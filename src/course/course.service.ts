@@ -1,16 +1,19 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Course } from './entities/course.entity';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
+import { Enrollment } from '../enrollment/entities/enrollment.entity';
 
 @Injectable()
 export class CourseService {
   constructor(
     @InjectRepository(Course)
     private readonly courseRepository: Repository<Course>,
-  ) {}
+    @InjectRepository(Enrollment)
+    private readonly enrollmentRepository: Repository<Enrollment>,
+  ) { }
 
   async create(createCourseDto: CreateCourseDto): Promise<Course> {
     const course = this.courseRepository.create(createCourseDto);
@@ -31,6 +34,19 @@ export class CourseService {
 
   async update(id: number, updateCourseDto: UpdateCourseDto): Promise<Course> {
     const course = await this.findOne(id);
+
+    if (updateCourseDto.maxCapacity) {
+      const enrolledCount = await this.enrollmentRepository.count({
+        where: { course: { id } },
+      });
+
+      if (updateCourseDto.maxCapacity < enrolledCount) {
+        throw new BadRequestException(
+          `Current enrolled students are ${enrolledCount}. Capacity cannot be less than that.`,
+        );
+      }
+    }
+
     Object.assign(course, updateCourseDto);
     return this.courseRepository.save(course);
   }
@@ -40,3 +56,4 @@ export class CourseService {
     await this.courseRepository.remove(course);
   }
 }
+
